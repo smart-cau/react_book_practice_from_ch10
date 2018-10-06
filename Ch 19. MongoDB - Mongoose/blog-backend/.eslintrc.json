@@ -1,0 +1,32 @@
+{
+    "env": {
+        "browser": true,
+        "node": true,
+        "es6": true
+    },
+    "extends": "airbnb-base",
+    "parserOptions": {
+        "ecmaFeatures": {
+            "jsx": true
+        },
+        "ecmaVersion": 2018,
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react", "jsx-ally", "import"
+    ],
+    "rules": {
+        "react/jsx-filename-extension" : 0,
+        "indent": [
+            "error",
+            2,
+            "tab"
+        ],
+
+        "quotes": [
+            "error",
+            "single"
+        ],
+        "semi": 0
+    }
+}
