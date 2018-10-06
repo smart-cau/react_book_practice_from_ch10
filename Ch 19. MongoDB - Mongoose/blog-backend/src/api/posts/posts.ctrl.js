@@ -1,106 +1,128 @@
-let postId = 1;
+const Post = require("../../models/post");
+const { ObjectId } = require("mongoose").Types;
+const Joi = require("joi");
 
-const posts = [
-  {
-    id: 1,
-    title: "제목",
-    body: "내용"
+exports.checkObjectId = (ctx, next) => {
+  const { id } = ctx.params;
+
+  if (!ObjectId.isValid(id)) {
+    ctx.status = 400;
+    return null;
   }
-];
+
+  return next();
+};
 
 // POST /api/posts
-exports.write = ctx => {
-  const { title, body } = ctx.request.body;
+exports.write = async ctx => {
+  // Joi로 body 검증.
+  const schema = Joi.object().keys({
+    title: Joi.string().required(),
+    body: Joi.string().required(),
+    tags: Joi.array()
+      .items(Joi.string())
+      .required()
+  });
 
-  postId += 1;
+  const result = Joi.validate(ctx.request.body, schema);
 
-  const post = { id: postId, title, body };
+  if (result.error) {
+    ctx.status = 400;
+    ctx.body = result.error;
+    return;
+  }
 
-  posts.push(post);
+  const { title, body, tags } = ctx.request.body;
 
-  ctx.body = posts;
+  const post = new Post({
+    title,
+    body,
+    tags
+  });
+
+  try {
+    await post.save();
+    ctx.body = post;
+  } catch (e) {
+    ctx.throw(e, 500);
+  }
 };
 
 // GET /api/posts
-exports.list = ctx => {
-  ctx.body = posts;
+exports.list = async ctx => {
+  // ctx.query.page가 있으면 이 값을 int로 바꾸고, 없으면 1일 int로 바꿈.
+  // 두번째 인자인 10은 10진수를 의미.
+  const page = parseInt(ctx.query.page || 1, 10);
+
+  if (page < 1) {
+    ctx.status = 400;
+    return;
+  }
+
+  try {
+    const posts = await Post.find()
+      .sort({ _id: -1 })
+      .limit(10)
+      .skip((page - 1) * 10)
+      .lean()
+      .exec();
+
+    const postCount = await Post.countDocuments().exec();
+    ctx.set("Last-Page", Math.ceil(postCount / 10));
+
+    const limitBodyLength = post => ({
+      ...post,
+      body: post.body.length < 100 ? post.body : `${post.body.slice(0, 100)}...`
+    });
+    ctx.body = posts.map(limitBodyLength);
+  } catch (e) {
+    ctx.throw(e, 500);
+  }
 };
 
 // GET /api/posts/:id
-exports.read = ctx => {
+exports.read = async ctx => {
   const { id } = ctx.params;
 
-  const post = posts.find(p => p.id.toString() === id);
-
-  if (!post) {
-    ctx.status = 404;
-    ctx.body = {
-      message: "there is no post"
-    };
-    return;
+  try {
+    const post = await Post.findById(id).exec();
+    if (!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.body = post;
+  } catch (e) {
+    ctx.throw(e, 500);
   }
-
-  ctx.body = post;
 };
 
 // DELETE /api/posts/:id
-exports.delete = ctx => {
+exports.delete = async ctx => {
   const { id } = ctx.params;
 
-  const index = posts.findIndex(p => p.id.toString() === id);
-
-  if (index === -1) {
-    ctx.status = 404;
-    ctx.body = {
-      message: "there is no post"
-    };
-    return;
+  try {
+    await Post.findByIdAndRemove(id).exec();
+    ctx.status = 204; // HTTP 상태 코드 참고.
+  } catch (e) {
+    ctx.throw(e, 500);
   }
-
-  posts.splice(index, 1);
-  ctx.status = 204;
 };
 
 // PATCH /api/posts/:id
-exports.update = ctx => {
+exports.update = async ctx => {
   const { id } = ctx.params;
 
-  const index = posts.findIndex(p => p.id.toString() === id);
+  try {
+    const post = await Post.findByIdAndUpdate(id, ctx.request.body, {
+      new: true
+    }).exec();
 
-  if (index === -1) {
-    ctx.status = 404;
-    ctx.body = {
-      message: "there is no post"
-    };
-    return;
+    if (!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.body = post;
+  } catch (e) {
+    ctx.throw(e, 500);
   }
-
-  posts[index] = {
-    ...posts[index],
-    ...ctx.request.body
-  };
-
-  ctx.body = posts[index];
-};
-
-// PUT /api/posts/:id
-exports.replace = ctx => {
-  const { id } = ctx.params;
-
-  const index = posts.findIndex(p => p.id.toString() === id);
-
-  if (index === -1) {
-    ctx.status = 404;
-    ctx.body = {
-      message: "there is no posts"
-    };
-    return;
-  }
-
-  posts[index] = {
-    id,
-    ...ctx.request.body
-  };
-
-  ctx.body = posts[index];
 };
