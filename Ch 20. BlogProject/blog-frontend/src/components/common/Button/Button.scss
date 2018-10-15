@@ -1,0 +1,68 @@
+@import 'styles/utils.scss';
+
+.button {
+  padding: 0.25rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+
+  &:hover {
+    @include material-shadow(2, 0.5);
+  }
+
+  // 버튼이 두개 이상 있다면 중간에 여백
+  & + & {
+    margin-left: 0.5rem;
+  }
+
+  // &.(className) --> .button이랑 .(className)이 같이 있을 때를 의미.
+  // 1) theme = 'default'
+  &.default {
+    background: $oc-blue-6;
+    &:hover {
+      background: $oc-blue-5;
+    }
+    &:active {
+      background: $oc-blue-6;
+    }
+  }
+
+  // 2) theme = 'gray'
+  &.gray {
+    background: $oc-gray-7;
+    &:hover {
+      background: $oc-gray-6;
+    }
+    &:active {
+      background: $oc-gray-7;
+    }
+  }
+
+  // 3) theme = 'outline'
+  &.outline {
+    border: 2px solid white;
+    border-radius: 2px;
+    &:hover {
+      background: white;
+      color: $oc-blue-6;
+    }
+    &:active {
+      background: rgba(255, 255, 255, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  // 4) theme = 'disabled'
+  &.disabled {
+    background: $oc-gray-4;
+    color: $oc-gray-6;
+    cursor: default;
+    &:hover, &:active {
+      box-shadow: none;
+      background: $oc-gray-4;
+    }
+  }
+}
